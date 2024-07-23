@@ -13,44 +13,64 @@ each rounded to four decimal places.
 import numpy as np
 
 def sigmoid(x):
+    """Compute the sigmoid activation for the input x."""
     return 1 / (1 + np.exp(-x))
 
-def sigmoid_derivative(x):
-    return sigmoid(x) * (1 - sigmoid(x))
+def sigmoid_derivative(y):
+    """Compute the derivative of the sigmoid function."""
+    return y * (1 - y)
 
-def mean_squared_error(y_true, y_pred):
+def mse_loss(y_true, y_pred):
+    """Compute the Mean Squared Error loss."""
     return np.mean((y_true - y_pred) ** 2)
 
-def train_neuron(feature_vectors, labels, weights, bias, learning_rate, epochs):
+def forward_pass(features, weights, bias):
+    """Perform the forward pass of the neuron."""
+    z = np.dot(features, weights) + bias
+    y_pred = sigmoid(z)
+    return y_pred
+
+def compute_gradients(features, labels, predictions):
+    """Compute the gradients of the loss with respect to weights and bias."""
+    dw = np.zeros_like(features[0], dtype=float)
+    db = 0.0
+    
+    for x, y_true, y_pred in zip(features, labels, predictions):
+        error = y_pred - y_true
+        gradient = error * sigmoid_derivative(y_pred)
+        dw += gradient * np.array(x, dtype=float)
+        db += gradient
+
+    dw /= len(features)
+    db /= len(features)
+    
+    return dw, db
+
+def update_parameters(weights, bias, dw, db, learning_rate):
+    """Update weights and bias using the computed gradients."""
+    weights -= learning_rate * dw
+    bias -= learning_rate * db
+    return weights, bias
+
+def train_neuron(features, labels, initial_weights, initial_bias, learning_rate, epochs):
+    """Train a single neuron with sigmoid activation using gradient descent."""
+    features = np.array(features, dtype=float)
+    weights = np.array(initial_weights, dtype=float)
+    bias = initial_bias
     mse_values = []
-    
+
     for epoch in range(epochs):
-        mse_epoch = 0
-        
-        for features, label in zip(feature_vectors, labels):
-            # Forward pass
-            z = np.dot(features, weights) + bias
-            pred = sigmoid(z)
-            
-            # Compute the error
-            error = label - pred
-            mse_epoch += error ** 2
-            
-            # Backward pass (Gradient computation)
-            d_error = -2 * error
-            d_pred = sigmoid_derivative(z)
-            d_weights = features * d_error * d_pred
-            d_bias = d_error * d_pred
-            
-            # Update weights and bias
-            weights -= learning_rate * d_weights
-            bias -= learning_rate * d_bias
-        
-        # Calculate and store the MSE for the epoch
-        mse_epoch /= len(feature_vectors)
-        mse_values.append(round(mse_epoch, 4))
-    
-    return weights, bias, mse_values
+        predictions = forward_pass(features, weights, bias)
+        loss = mse_loss(np.array(labels), np.array(predictions))
+        mse_values.append(round(loss, 4))
+
+        dw, db = compute_gradients(features, labels, predictions)
+        weights, bias = update_parameters(weights, bias, dw, db, learning_rate)
+
+    return weights.round(4), round(bias, 4), mse_values
+
+
 
 
 print(train_neuron(np.array([[1.0, 2.0], [2.0, 1.0], [-1.0, -2.0]]), np.array([1, 0, 0]), np.array([0.1, -0.2]), 0.0, 0.1, 2))
+print(train_neuron(np.array([[1, 2], [2, 3], [3, 1]]), np.array([1, 0, 1]), np.array([0.5, -0.2]), 0, 0.1, 3))
